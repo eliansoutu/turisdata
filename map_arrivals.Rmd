@@ -14,16 +14,20 @@ Mapas con indicadores turísticos, fuente de datos: Banco Mundial.
 #Llegadas
 arrivals <- readxl::read_xls("llegadas.xls")
 
+#Elimino columnas que no sirven
 arrivals <- arrivals[,-(3:39)]
 arrivals <- arrivals[,-(27:28)]
 
+#Renombro columnas
 arrivals <- rename(.data = arrivals, country = "Country Name")
 arrivals <- rename(.data = arrivals, "iso-a3" = "Country Code")
 
 arrivals$country <- gsub(arrivals$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
 
+#Paso los datos a formato tidy
 arrivals <- gather(data = arrivals, key = "anio", value = "arrivals", 3:26)
 
+#Me quedo solo con los registros de países
 arrivals <- arrivals %>%  na.omit()
 arrivals <- arrivals %>%  filter(!country == "Países de ingreso bajo" &
                                    !country == "El mundo árabe"&
@@ -75,6 +79,7 @@ arrivals <- arrivals %>%  filter(!country == "Países de ingreso bajo" &
 
 ```
 
+Mismo proceso para el resto de los datasets
 ```{r}
 #Ingresos monetarios
 incomes <- readxl::read_xls("ingresos.xls")
@@ -196,6 +201,7 @@ exports <- exports %>%  filter(!country == "Países de ingreso bajo" &
                                    !country == "Asia meridional" &
                                    !country == "Ingreso alto")
 
+#Prueba de graficar un mapa con Highcharter
 
 exports %>% filter(anio == "2018") %>% 
   hcmap(map = "custom/world-highres3", 
@@ -405,7 +411,7 @@ expenses <- expenses[,-(3:4)]
 
 ```
 
-Cargamos datos del PBI y la población de cada país para calcular otros indicadores
+Cargo datos del PBI y la población de cada país para calcular otros indicadores
 ```{r}
 gdp <- readxl::read_xls("pbi.xls")
 
