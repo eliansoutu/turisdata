@@ -17,15 +17,16 @@ library(wordcloud2)
 library(shinydashboard)
 library(broom)
 ```
-Turismo en Argentina
+Turismo en Argentina, fuente de datos: plataforma Yvera del Ministerio de Turismo y Deporte, encuestas del INDEC
 Receptivo
 ```{r}
+#Llegadas de turistas internacionales
 receptivo_argentina <- read.csv("datasets_argentina/turistas_no_residentes_receptivo.csv")
 
+#Limpieza de datos
 receptivo_argentina <- receptivo_argentina %>% filter(!pais_origen == "Argentina")
 
 receptivo_argentina <- spread(receptivo_argentina, medio_de_transporte, turistas_no_residentes)
-
 
 receptivo_argentina$indice_tiempo <- as.yearmon(as.character.Date(receptivo_argentina$indice_tiempo), "%Y-%m") 
 receptivo_argentina$indice_tiempo <- as.character.Date(format(receptivo_argentina$indice_tiempo, "%b%y"))
@@ -36,6 +37,7 @@ receptivo_argentina <-  receptivo_argentina %>% rename(terrestre = Terrestre)
 
 receptivo_argentina <- receptivo_argentina %>%  mutate(total = aereo + fluvial + terrestre)
 
+#Grafico
 receptivo_argentina %>% filter (pais_origen == "Brasil") %>%  
   gather("medio_de_transporte", "turistas_no_residentes", 3:5) %>%  
   select(pais_origen, medio_de_transporte, turistas_no_residentes) %>% 
