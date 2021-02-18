@@ -1,0 +1,676 @@
+---
+title: "R Notebook"
+---
+
+
+```{r}
+library(tidyverse)
+library(highcharter)
+
+```
+Turismo Mundial
+Mapas con indicadores turísticos, fuente de datos: Banco Mundial.
+```{r}
+#Llegadas
+arrivals <- readxl::read_xls("llegadas.xls")
+
+arrivals <- arrivals[,-(3:39)]
+arrivals <- arrivals[,-(27:28)]
+
+arrivals <- rename(.data = arrivals, country = "Country Name")
+arrivals <- rename(.data = arrivals, "iso-a3" = "Country Code")
+
+arrivals$country <- gsub(arrivals$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+arrivals <- gather(data = arrivals, key = "anio", value = "arrivals", 3:26)
+
+arrivals <- arrivals %>%  na.omit()
+arrivals <- arrivals %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+
+
+```
+
+```{r}
+#Ingresos monetarios
+incomes <- readxl::read_xls("ingresos.xls")
+
+incomes <- rename(.data = incomes, country = "Country Name")
+incomes <- rename(.data = incomes, "iso-a3" = "Country Code")
+
+incomes$country <- gsub(incomes$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+incomes <- gather(data = incomes, key = "anio", value = "incomes", 3:26)
+
+
+incomes <- incomes %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+
+
+
+    
+```
+
+```{r}
+#Peso en las exportaciones
+exports <- readxl::read_xls("participacion_exportaciones.xls")
+
+exports <- rename(.data = exports, country = "Country Name")
+exports <- rename(.data = exports, "iso-a3" = "Country Code")
+
+exports$country <- gsub(exports$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+exports <- gather(data = exports, key = "anio", value = "exports", 3:26)
+
+exports <- exports %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+
+exports %>% filter(anio == "2018") %>% 
+  hcmap(map = "custom/world-highres3", 
+        joinBy = "iso-a3", 
+        value = "exports",
+        name = "Participación",
+        dataLabels = list(enabled = TRUE, format = '{country}'),
+        download_map_data = F,
+        nullColor = "#DBDBDC",
+        borderColor = "#FAFAFA", 
+        borderWidth = 0.5,
+        tooltip = list(valueDecimals = 2, valueSuffix = " %")) %>%
+  hc_mapNavigation(enabled = F) %>%
+  hc_title(text = "Participación del turismo en el total de las exportaciones", style = list(color = "Purple", 
+                                                         fontSize = 28, 
+                                                         fontFamily = "Tahoma",
+                                                         fontWeight = "bold")) %>% 
+  hc_legend(title = list(text = "Porcentaje", align = "Center")) %>% 
+  hc_colorAxis(stops = 
+                 color_stops(colors = viridisLite::cividis(10, 
+                                                          begin = 0.2,
+                                                          end = 1,
+                                                          direction = 1)), 
+               type = "logarithmic") %>%  
+  hc_add_theme(hc_theme_flat(chart = list(backgroundColor = "#FFFFFD"))) %>% 
+  hc_credits(enabled = F) 
+
+```
+
+```{r}
+#Peso en las importaciones
+imports <- readxl::read_xls("participacion_importaciones.xls")
+
+imports <- rename(.data = imports, country = "Country Name")
+imports <- rename(.data = imports, "iso-a3" = "Country Code")
+
+imports$country <- gsub(imports$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+imports <- gather(data = imports, key = "anio", value = "imports", 3:26)
+
+imports <- imports %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+imports <- imports[,-(3:4)]
+```
+
+```{r}
+#Salidas
+departures <- readxl::read_xls("departures.xls")
+
+departures <- rename(.data = departures, country = "Country Name")
+departures <- rename(.data = departures, "iso-a3" = "Country Code")
+
+departures$country <- gsub(departures$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+departures <- gather(data = departures, key = "anio", value = "departures", 3:26)
+
+departures <- departures %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+```
+
+```{r}
+#Egresos monetarios
+expenses <- readxl::read_xls("imports.xls")
+
+expenses <- rename(.data = expenses, country = "Country Name")
+expenses <- rename(.data = expenses, "iso-a3" = "Country Code")
+
+expenses$country <- gsub(expenses$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+expenses <- gather(data = expenses, key = "anio", value = "expenses", 3:26)
+
+expenses <- expenses %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+expenses <- expenses[,-(3:4)]
+
+```
+
+Cargamos datos del PBI y la población de cada país para calcular otros indicadores
+```{r}
+gdp <- readxl::read_xls("pbi.xls")
+
+gdp <- rename(.data = gdp, country = "Country Name")
+gdp <- rename(.data = gdp, "iso-a3" = "Country Code")
+
+gdp$country <- gsub(gdp$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+gdp <- gather(data = gdp, key = "anio", value = "gdp", 3:26)
+
+gdp <- gdp %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+
+```
+
+```{r}
+population <- readxl::read_xls("poblacion.xls")
+
+population <- rename(.data = population, country = "Country Name")
+population <- rename(.data = population, "iso-a3" = "Country Code")
+
+population$country <- gsub(population$country, pattern = "Hong Kong, Región Administrativa Especial", replacement = "Hong Kong")
+
+population <- gather(data = population, key = "anio", value = "population", 3:26)
+
+population <- population %>%  filter(!country == "Países de ingreso bajo" &
+                                   !country == "El mundo árabe"&
+                                   !country == "Europa Central y del Báltico" &
+                                   !country == "Estados pequeos del Caribe" &
+                                   !country == "Asia oriental y el Pacífico (excluido altos ingresos)" &
+                                   !country == "inicial del dividendo demográfico" &
+                                   !country == "Asia oriental y el Pacífico" &
+                                   !country == "Europa y Asia central (excluido altos ingresos)" &
+                                   !country == "Europa y Asia central" &
+                                   !country == "Zona del Euro" &
+                                   !country == "Frágiles y situaciones de conflicto afectados" &
+                                   !country == "Países pobres muy endeudados (PPME)" &
+                                   !country == "Sólo BIRF" &
+                                   !country == "BIRF y la AIF" &
+                                   !country == "total de la AIF" &
+                                   !country == "mezcla de la AIF" &
+                                   !country == "Sólo AIF" &
+                                   !country == "No clasificado" &
+                                   !country == "América Latina y el Caribe (excluido altos ingresos)" &
+                                   !country == "América Latina y el Caribe" &
+                                   !country == "Países menos desarrollados: clasificación de las Naciones Unidas" &
+                                   !country == "Países de ingreso mediano bajo" &
+                                   !country == "Ingreso mediano y bajo" &
+                                   !country == "avanzada del dividendo demográfico" &
+                                   !country == "Oriente Medio y Norte de África" &
+                                   !country == "Ingreso mediano" &
+                                   !country == "Oriente Medio y Norte de África (excluido altos ingresos)" &
+                                   !country == "América del Norte" &
+                                   !country == "Miembros OCDE" &
+                                   !country == "previa al dividendo demográfico" &
+                                   !country == "Estados pequeos de las Islas del Pacfico" &
+                                   !country == "posterior al dividendo demográfico" &
+                                   !country == "África al sur del Sahara (excluido altos ingresos)" &
+                                   !country == "Otros Estados pequeos" &
+                                   !country == "África al sur del Sahara" &
+                                   !country == "Pequeños Estados" &
+                                   !country == "Asia oriental y el Pacífico (BIRF y la AIF)" &
+                                   !country == "Europa y Asia central (BIRF y la AIF)" &
+                                   !country == "América Latina y el Caribe (BIRF y la AIF)" &
+                                   !country == "Oriente Medio y Norte de África (BIRF y la AIF)" &
+                                   !country == "Asia meridional (BIRF y la AIF)" &
+                                   !country == "África al sur del Sahara (BIRF y la AIF)" &
+                                   !country == "Ingreso mediano alto"  &
+                                   !country == "Asia meridional" &
+                                   !country == "Ingreso alto")
+
+
+#Armo un dataset con todos los datos
+
+indicadores <- left_join(gdp, incomes)
+
+indicadores <- left_join(indicadores, population)
+
+indicadores <- left_join(indicadores, expenses)
+
+indicadores <- left_join(indicadores, imports)
+
+indicadores <- left_join(indicadores, exports)
+
+indicadores <- left_join(indicadores, departures)
+
+indicadores <- left_join(indicadores, arrivals)
+
+write.csv(indicadores, "indicadores.csv")
+
+indicadores <- read.csv("indicadores.csv", encoding = "UTF-8")
+
+indicadores <- indicadores %>%  rename("iso-a3" = iso.a3)
+
+```
+
+```{r}
+#Calculo de indicadores extras
+indicadores2 <- indicadores %>%  mutate(balanza = incomes - expenses)
+
+indicadores2 <- indicadores2 %>%  mutate(consumo_receptivo = (incomes/gdp)*100)
+indicadores2 <- indicadores2 %>%  mutate(consumo_emisivo = (expenses/gdp)*100)
+
+indicadores2 <- indicadores2 %>%  mutate(carga_turistica = arrivals/population)
+
+indicadores2$anio <- as.Date(indicadores2$anio, format ='%Y')
+
+```
+
+
+Proyección de indicadores
+```{r}
+
+library(forecast)
+library(tseries)
+
+#Prueba auto arima
+prueba <- indicadores2 %>% filter(country == "Argentina") %>%  select(arrivals) 
+arrivals_ts <- ts(prueba, start = 1995, frequency = 1)
+
+plot(arrivals_ts)
+
+
+pronostico = forecast(auto.arima(arrivals_ts), h = 10)
+pronostico
+hchart(pronostico)
+
+
+algo <- indicadores2 %>% filter(country == "Argentina") %>% select(arrivals) %>% ts(start = 1995, frequency = 1) 
+
+forecast(auto.arima(algo), h = 10) %>% hchart(algo)
+```
+
+
+Pruebas con arima manualmente calculando estadisticos
+```{r}
+adf.test(seriedif, alternative = "stationary")
+
+seriedif <- diff(arrivals_ts, differences = 2)
+
+plot(seriedif)
+
+acf(seriedif)
+pacf(seriedif)
+
+
+modelo_arima <- arima(arrivals_ts, order = c(3,2,2))
+modelo_arima
+
+
+tsdiag(modelo_arima)
+Box.test(residuals(modelo_arima), type = "Ljung-Box")
+error = residuals(modelo_arima)
+plot(error)
+
+
+#Otra
+a <- df_pronosticos_balanza %>% filter(country == "Argentina") %>% select(balanza) %>% ts(start = 1995, frequency = 1)
+
+adf.test(a, alternative = "stationary")
+
+a_diff <- diff(a)
+plot(a_diff)
+
+
+
+adf.test(a_diff, alternative = "stationary") #el p-value es mayor que 0.05 por lo que no es estacionaria
+a_diff2 <- diff(a, differences = 2) #probamos con diferencias
+plot(a_diff2)
+
+adf.test(a_diff2, alternative = "stationary") #acá lo logramos
+
+acf(a_diff2)
+acf(ts(a_diff2, frequency = 3)) # 3 media móvil
+
+pacf(a_diff2)
+pacf(ts(a_diff2, frequency = 1)) # 1 autoregresivo
+
+modelo_arima <- arima(a, order = c(1,2,3))
+modelo_arima
+
+
+tsdiag(modelo_arima)
+Box.test(residuals(modelo_arima), type = "Ljung-Box")
+error = residuals(modelo_arima)
+plot(error)
+
+
+forecast(arima(a, order = c(1,2,3))) %>% hchart()
+```
+
+
+```{r}
+df_pronosticos_departures <- indicadores2 %>% select(country, departures) %>% drop_na() %>% arrange(country)
+
+df_pronosticos_departures <- df_pronosticos_departures  %>% group_by(country) %>%  mutate(full = n_distinct(departures)) %>% filter(full == 24)
+
+
+df_pronosticos_arrivals <- indicadores2 %>% select(country, arrivals) %>% drop_na() %>% arrange(country)
+
+df_pronosticos_arrivals <- df_pronosticos_arrivals  %>% group_by(country) %>%  mutate(full = n_distinct(arrivals)) %>% filter(full == 24)
+
+
+df_pronosticos_balanza <- indicadores2 %>% select(country, balanza) %>% drop_na() %>% arrange(country)
+
+df_pronosticos_balanza <- df_pronosticos_balanza  %>% group_by(country) %>%  mutate(full = n_distinct(balanza)) %>% filter(full == 24)
+
+class(df_pronosticos_arrivals)
+
+df_pronosticos_arrivals <- as.data.frame(df_pronosticos_arrivals) 
+df_pronosticos_departures <- as.data.frame(df_pronosticos_departures) 
+df_pronosticos_balanza<- as.data.frame(df_pronosticos_balanza) 
+
+df_pronosticos_arrivals <- df_pronosticos_arrivals %>%  filter(!country == "Unión Europea" &
+                                                                 !country == "Mundo")
+df_pronosticos_balanza <- df_pronosticos_balanza  %>% 
+  filter(!country == "Puerto Rico" &
+           !country == "Luxemburgo" &
+           !country == "Noruega" &
+           !country == "Mundo" &
+           !country == "Unión Europea")
+```
+
+
