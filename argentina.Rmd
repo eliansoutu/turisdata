@@ -1,0 +1,732 @@
+---
+title: "R Notebook"
+---
+```{r}
+library(tidyverse)
+library(lubridate)
+library(highcharter)
+library(tseries)
+library(zoo)
+library(ggplot2)
+library(data.table)
+library(caret)
+library(RSelenium)
+library(tm)
+library(tidytext)
+library(wordcloud2)
+library(shinydashboard)
+library(broom)
+```
+Turismo en Argentina
+Receptivo
+```{r}
+receptivo_argentina <- read.csv("datasets_argentina/turistas_no_residentes_receptivo.csv")
+
+receptivo_argentina <- receptivo_argentina %>% filter(!pais_origen == "Argentina")
+
+receptivo_argentina <- spread(receptivo_argentina, medio_de_transporte, turistas_no_residentes)
+
+
+receptivo_argentina$indice_tiempo <- as.yearmon(as.character.Date(receptivo_argentina$indice_tiempo), "%Y-%m") 
+receptivo_argentina$indice_tiempo <- as.character.Date(format(receptivo_argentina$indice_tiempo, "%b%y"))
+
+receptivo_argentina <-  receptivo_argentina %>% rename(aereo = Aérea)
+receptivo_argentina <-  receptivo_argentina %>% rename(fluvial = `Fluvial/Marítima`)
+receptivo_argentina <-  receptivo_argentina %>% rename(terrestre = Terrestre)
+
+receptivo_argentina <- receptivo_argentina %>%  mutate(total = aereo + fluvial + terrestre)
+
+receptivo_argentina %>% filter (pais_origen == "Brasil") %>%  
+  gather("medio_de_transporte", "turistas_no_residentes", 3:5) %>%  
+  select(pais_origen, medio_de_transporte, turistas_no_residentes) %>% 
+  group_by(pais_origen, medio_de_transporte) %>% 
+  summarise(turistas_no_residentes = sum(turistas_no_residentes)) %>% 
+  hchart("pie", hcaes(medio_de_transporte, turistas_no_residentes))
+
+
+receptivo_gasto_estadia <- read.csv("datasets_argentina/receptivo_modificado.csv", sep = ";")
+
+receptivo_gasto_estadia <-  receptivo_gasto_estadia %>% rename(trimestre = cuatrimestre)
+
+receptivo_gasto_estadia <- receptivo_gasto_estadia %>% 
+  mutate(trimestre = case_when(trimestre == "Primer trimestre" ~ "1T",
+                                                         trimestre == "Segundo trimestre" ~ "2T",
+                                                         trimestre == "Tercer trimestre" ~ "3T",
+                                                         trimestre == "Cuarto trimestre" ~ "4T",
+                               trimestre == "Primer trimestre " ~ "1T",
+                                                         trimestre == "Segundo trimestre " ~ "2T",
+                                                         trimestre == "Tercer trimestre " ~ "3T",
+                                                         trimestre == "Cuarto trimestre " ~ "4T"))
+
+receptivo_gasto_estadia <- receptivo_gasto_estadia %>% mutate(trimestre = paste0(trimestre," ", anio))
+receptivo_gasto_estadia$anio <- NULL 
+
+
+receptivo_gasto_estadia$gasto_promedio_diario <- gsub(receptivo_gasto_estadia$gasto_promedio_diario, pattern = "na", replacement = 0)
+receptivo_gasto_estadia$estadia_promedio <- gsub(receptivo_gasto_estadia$estadia_promedio, pattern = "na", replacement = 0)
+receptivo_gasto_estadia$gasto_promedio_diario <- gsub(receptivo_gasto_estadia$gasto_promedio_diario, pattern = ",", replacement = ".")
+receptivo_gasto_estadia$estadia_promedio <- gsub(receptivo_gasto_estadia$estadia_promedio, pattern = ",", replacement = ".")
+receptivo_gasto_estadia$pais_origen <- gsub(receptivo_gasto_estadia$pais_origen, pattern = "EE.UU y Canadá", replacement = "EE.UU. y Canadá")
+
+receptivo_gasto_estadia$estadia_promedio <- as.numeric(receptivo_gasto_estadia$estadia_promedio)
+receptivo_gasto_estadia$gasto_promedio_diario <- as.numeric(receptivo_gasto_estadia$gasto_promedio_diario)
+
+receptivo_gasto_estadia %>%  filter(pais_origen == "Brasil") %>%  hchart("column", hcaes(trimestre, gasto_promedio_diario))
+
+```
+
+Emisivo
+```{r}
+emisivo_argentina <- read.csv("datasets_argentina/turistas_residentes_emisivo.csv")
+
+unique(emisivo_argentina$pais_destino)
+
+emisivo_argentina <- spread(emisivo_argentina, medio_de_transporte, turistas_residentes)
+
+
+emisivo_argentina$indice_tiempo <- as.yearmon(as.character.Date(emisivo_argentina$indice_tiempo), "%Y-%m") 
+emisivo_argentina$indice_tiempo <- as.character.Date(format(emisivo_argentina$indice_tiempo, "%b%y"))
+
+emisivo_argentina <-  emisivo_argentina %>% rename(aereo = Aérea)
+emisivo_argentina <-  emisivo_argentina %>% rename(fluvial = `Fluvial/Marítima`)
+emisivo_argentina <-  emisivo_argentina %>% rename(terrestre = Terrestre)
+
+emisivo_argentina <- emisivo_argentina %>%  mutate(total = aereo + fluvial + terrestre)
+
+emisivo_argentina %>% filter (pais_destino == "Brasil") %>%  
+  gather("medio_de_transporte", "turistas_residentes", 3:5) %>%  
+  select(pais_destino, medio_de_transporte, turistas_residentes) %>% 
+  group_by(pais_destino, medio_de_transporte) %>% 
+  summarise(turistas_residentes = sum(turistas_residentes)) %>% 
+  hchart("pie", hcaes(medio_de_transporte, turistas_residentes))
+
+
+emisivo_gasto_estadia <- read.csv("datasets_argentina/emisivo_modificado.csv", sep = ";")
+
+
+emisivo_gasto_estadia <- emisivo_gasto_estadia %>% 
+  mutate(trimestre = case_when(trimestre == "Primer trimestre" ~ "1T",
+                                                         trimestre == "Segundo trimestre" ~ "2T",
+                                                         trimestre == "Tercer trimestre" ~ "3T",
+                                                         trimestre == "Cuarto trimestre" ~ "4T",
+                               trimestre == "Primer trimestre " ~ "1T",
+                                                         trimestre == "Segundo trimestre " ~ "2T",
+                                                         trimestre == "Tercer trimestre " ~ "3T",
+                                                         trimestre == "Cuarto trimestre " ~ "4T"))
+
+emisivo_gasto_estadia <- emisivo_gasto_estadia %>% mutate(trimestre = paste0(trimestre," ", anio))
+emisivo_gasto_estadia$anio <- NULL 
+
+
+emisivo_gasto_estadia$gasto_diario_promedio <- gsub(emisivo_gasto_estadia$gasto_diario_promedio, pattern = "na", replacement = 0)
+emisivo_gasto_estadia$estadia_promedio <- gsub(emisivo_gasto_estadia$estadia_promedio, pattern = "na", replacement = 0)
+emisivo_gasto_estadia$gasto_diario_promedio <- gsub(emisivo_gasto_estadia$gasto_diario_promedio, pattern = ",", replacement = ".")
+emisivo_gasto_estadia$estadia_promedio <- gsub(emisivo_gasto_estadia$estadia_promedio, pattern = ",", replacement = ".")
+emisivo_gasto_estadia$pais_destino <- gsub(emisivo_gasto_estadia$pais_destino, pattern = "EE.UU y Canadá", replacement = "EE.UU. y Canadá")
+
+emisivo_gasto_estadia$estadia_promedio <- as.numeric(emisivo_gasto_estadia$estadia_promedio)
+emisivo_gasto_estadia$gasto_diario_promedio <- as.numeric(emisivo_gasto_estadia$gasto_diario_promedio)
+
+```
+
+Interno
+```{r}
+interno_edad <- read.csv("datasets_argentina/turistas_residentes_edad_interno.csv")
+interno_sexo <- read.csv("datasets_argentina/turistas_residentes_sexo_interno.csv")
+interno_transporte <- read.csv("datasets_argentina/turistas_residentes_tipo_transporte_interno.csv")
+interno_motivo <- read.csv("datasets_argentina/turistas_residentes_motivo_interno.csv")
+interno_destino <- read.csv("datasets_argentina/turistas_residentes_destino_interno.csv")
+interno_origen <- read.csv("datasets_argentina/turistas_residentes_origen_interno.csv")
+
+interno_edad$indice_tiempo <- substr(interno_edad$indice_tiempo, start = 1, stop = 4)
+interno_sexo$indice_tiempo <- substr(interno_sexo$indice_tiempo, start = 1, stop = 4)
+interno_transporte$indice_tiempo <- substr(interno_transporte$indice_tiempo, start = 1, stop = 4)
+interno_motivo$indice_tiempo <- substr(interno_motivo$indice_tiempo, start = 1, stop = 4)
+interno_destino$indice_tiempo <- substr(interno_destino$indice_tiempo, start = 1, stop = 4)
+interno_origen$indice_tiempo <- substr(interno_origen$indice_tiempo, start = 1, stop = 4)
+
+interno_edad <- interno_edad %>% group_by(indice_tiempo, edad) %>% summarise(turistas = sum(turistas))
+interno_sexo <- interno_sexo %>% group_by(indice_tiempo, sexo) %>% summarise(turistas = sum(turistas))
+interno_transporte <- interno_transporte %>% group_by(indice_tiempo, tipo_transporte) %>% summarise(turistas = sum(turistas))
+interno_motivo <- interno_motivo %>% group_by(indice_tiempo, motivo) %>% summarise(turistas = sum(turistas))
+interno_destino <- interno_destino %>% group_by(indice_tiempo, region_destino) %>% summarise(turistas = sum(turistas))
+interno_origen <- interno_origen %>% group_by(indice_tiempo, region_origen) %>% summarise(turistas = sum(turistas))
+
+interno_destino$indice_tiempo <- as.numeric(interno_destino$indice_tiempo)
+interno_origen$indice_tiempo <- as.numeric(interno_origen$indice_tiempo)
+interno_edad$indice_tiempo <- as.numeric(interno_edad$indice_tiempo)
+interno_sexo$indice_tiempo <- as.numeric(interno_sexo$indice_tiempo)
+interno_transporte$indice_tiempo <- as.numeric(interno_transporte$indice_tiempo)
+interno_motivo$indice_tiempo <- as.numeric(interno_motivo$indice_tiempo)
+
+```
+
+```{r}
+interno_destino <- interno_destino %>% arrange(indice_tiempo, desc(turistas)) 
+interno_origen <- interno_origen %>% arrange(indice_tiempo, desc(turistas))
+interno_motivo <- interno_motivo %>% arrange(indice_tiempo, desc(turistas))
+
+interno_edad %>% filter(indice_tiempo == 2014) %>%  
+  hchart("bar", hcaes(edad, turistas)) %>% 
+  hc_xAxis(labels = list(style = list(color = "#49CBAB")))
+
+```
+
+Alojamiento
+```{r}
+alojamiento_receptivo <- read.csv("datasets_argentina/receptivo_alojamiento_modificado.csv", sep = ";")
+
+alojamiento_receptivo$gasto_total <- gsub(alojamiento_receptivo$gasto_total, pattern = "na", replacement = 0)
+
+
+alojamiento_receptivo$gasto_total <- as.numeric(alojamiento_receptivo$gasto_total)
+
+destino_receptivo <- read.csv("datasets_argentina/receptivo_destino_modificado.csv", sep = ";")
+
+
+destino_receptivo$pernoctaciones <- gsub(destino_receptivo$pernoctaciones, pattern = ",", replacement = "")
+destino_receptivo$visitas_turistas <- gsub(destino_receptivo$visitas_turistas, pattern = ",", replacement = "")
+
+destino_receptivo$anio <- as.numeric(destino_receptivo$anio)
+destino_receptivo$pernoctaciones <- as.numeric(destino_receptivo$pernoctaciones)
+destino_receptivo$visitas_turistas <- as.numeric(destino_receptivo$visitas_turistas)
+
+alojamiento_receptivo <- alojamiento_receptivo %>% arrange(anio, desc(gasto_total)) 
+destino_receptivo <- destino_receptivo %>% arrange(anio, desc(visitas_turistas))
+
+alojamiento_receptivo %>%  filter(anio == 2014) %>%  hchart("column", hcaes(tipo_alojamiento, gasto_total))
+
+destino_receptivo %>%  filter(anio == 2012) %>% hchart("bar", hcaes(destino, pernoctaciones))
+```
+
+Tipo de cambio
+```{r}
+rec_arg_mensual <- receptivo_argentina %>% select(indice_tiempo, pais_origen, total)
+
+tipo_cambio <- read.csv("datasets_argentina/cambio_real_multilateral_base2015_mensual.csv")
+
+tipo_cambio <- tipo_cambio %>% select(indice_tiempo, tipo_cambio_real_multilateral_actual, tipo_cambio_real_brasil, tipo_cambio_real_chile, tipo_cambio_real_estados_unidos, tipo_cambio_real_uruguay, tipo_cambio_real_zona_euro)
+
+tipo_cambio <- tipo_cambio[-(1:228),]
+
+rec_arg_mensual <- rec_arg_mensual[-(505:522),]
+
+tipo_cambio$indice_tiempo <- as.yearmon(as.character.Date(tipo_cambio$indice_tiempo), "%Y-%m-%d") 
+tipo_cambio$indice_tiempo <- as.character.Date(format(tipo_cambio$indice_tiempo, "%b%y"))
+
+unique(rec_arg_mensual$pais_origen)
+unique(tipo_cambio)
+tipo_cambio <- tipo_cambio %>% rename("Resto de América" = tipo_cambio_real_multilateral_actual, "Brasil" = tipo_cambio_real_brasil, "Chile" = tipo_cambio_real_chile, "EE.UU. y Canadá" = tipo_cambio_real_estados_unidos, "Europa" = tipo_cambio_real_zona_euro, "Uruguay" = tipo_cambio_real_uruguay)
+
+tipo_cambio <- gather(tipo_cambio, key = "pais_origen", value = "tipo_cambio_real", 2:7)
+
+rec_arg_mensual$pais_origen <- gsub(rec_arg_mensual$pais_origen, pattern = "Bolivia", replacement = "Resto de América")
+rec_arg_mensual$pais_origen <- gsub(rec_arg_mensual$pais_origen, pattern = "Paraguay", replacement = "Resto de América")
+tipo_cambio$pais_origen <- gsub(tipo_cambio$pais_origen, pattern = "Resto de América", replacement = "Resto del mundo")
+rec_arg_mensual$pais_origen <- gsub(rec_arg_mensual$pais_origen, pattern = "Resto de América", replacement = "Resto del mundo")
+
+rec_arg_mensual <- rec_arg_mensual %>% group_by(indice_tiempo, pais_origen) %>% summarise(total = sum(total))
+rec_arg_mensual <- rec_arg_mensual %>% group_by(indice_tiempo, pais_origen) %>% summarise(total = sum(total))
+
+receptivo_tipo_cambio <- left_join(tipo_cambio, rec_arg_mensual)
+
+receptivo_tipo_cambio <- receptivo_tipo_cambio %>% rename(turistas = total)
+```
+
+Modelización de demanda
+```{r}
+write.csv(receptivo_tipo_cambio, "df_cambio_turistas.csv")
+
+df_prueba <- receptivo_tipo_cambio %>%  filter(!turistas < 3000 & !turistas > 250000)
+
+
+df_prueba$indice_tiempo <- gsub(df_prueba$indice_tiempo, pattern = ".[1234567890]", replacement = "")
+df_prueba$indice_tiempo <- gsub(df_prueba$indice_tiempo, pattern = "[1234567890]", replacement = "")
+df_prueba$indice_tiempo <- gsub(df_prueba$indice_tiempo, pattern = " ", replacement = "")
+
+lm_fit <- lm(log(turistas)~ log(tipo_cambio_real) + pais_origen + indice_tiempo, data = df_prueba)
+
+summary(lm_fit)
+
+
+caso_nuevo <- tibble(tipo_cambio_real = c(105.92350), pais_origen = "EE.UU. y Canadá", 
+                     indice_tiempo = "dic")
+
+exp(predict(lm_fit,newdata = caso_nuevo))
+
+options(scipen = 20)
+
+#Brasil
+
+latam_receptivo <- receptivo_tipo_cambio %>% 
+  filter(pais_origen == "Brasil") %>% 
+  filter(!indice_tiempo == "mar.20 " &
+           !indice_tiempo == "abr.20 " &
+           !indice_tiempo == "may.20 " &
+           !indice_tiempo == "jun.20 " &
+           !indice_tiempo == "jul.20 " &
+           !indice_tiempo == "ago.20 ")
+
+latam_receptivo$indice_tiempo <- gsub(latam_receptivo$indice_tiempo, pattern = " ", replacement = "")
+
+pbi_br <- readxl::read_xlsx("datasets_argentina/pbi_brasil.xlsx")
+
+rm(mercado_brasil)
+mercado_brasil <- left_join(latam_receptivo, pbi_br)
+
+mercado_brasil$indice_tiempo <- gsub(mercado_brasil$indice_tiempo, pattern = ".[1234567890]", replacement = "")
+mercado_brasil$indice_tiempo <- gsub(mercado_brasil$indice_tiempo, pattern = "[1234567890]", replacement = "")
+
+modeloBr <- lm(turistas ~ tipo_cambio_real + pbi_per_capita + indice_tiempo, data = mercado_brasil)
+summary(modeloBr)
+
+write.csv(tidy(modeloBr), "coefs_brasil.csv")
+write.csv(glance(modeloBr), "lm_brasil.csv")
+
+#Chile
+
+chile <- receptivo_tipo_cambio %>% 
+  filter(pais_origen == "Chile") %>% 
+  filter(!indice_tiempo == "mar.20 " &
+           !indice_tiempo == "abr.20 " &
+           !indice_tiempo == "may.20 " &
+           !indice_tiempo == "jun.20 " &
+           !indice_tiempo == "jul.20 " &
+           !indice_tiempo == "ago.20 ")
+
+chile$indice_tiempo <- gsub(chile$indice_tiempo, pattern = " ", replacement = "")
+
+pbi_ch <- readxl::read_xlsx("datasets_argentina/pbi_ch.xlsx")
+
+rm(mercado_chile)
+mercado_chile <- left_join(chile, pbi_ch)
+
+mercado_chile$indice_tiempo <- gsub(mercado_chile$indice_tiempo, pattern = ".[1234567890]", replacement = "")
+mercado_chile$indice_tiempo <- gsub(mercado_chile$indice_tiempo, pattern = "[1234567890]", replacement = "")
+
+modeloCh <- lm(turistas ~ tipo_cambio_real + pbi_per_capita + indice_tiempo, data = mercado_chile)
+summary(modeloCh)
+
+write.csv(tidy(modeloCh), "coefs_chile.csv")
+write.csv(glance(modeloCh), "lm_chile.csv")
+
+#Uruguay
+
+uruguay <- receptivo_tipo_cambio %>% 
+  filter(pais_origen == "Uruguay") %>% 
+  filter(!indice_tiempo == "mar.20 " &
+           !indice_tiempo == "abr.20 " &
+           !indice_tiempo == "may.20 " &
+           !indice_tiempo == "jun.20 " &
+           !indice_tiempo == "jul.20 " &
+           !indice_tiempo == "ago.20 ")
+
+uruguay$indice_tiempo <- gsub(uruguay$indice_tiempo, pattern = " ", replacement = "")
+
+pbi_uy <- readxl::read_xlsx("datasets_argentina/pbi_uy.xlsx")
+
+rm(mercado_uruguay)
+mercado_uruguay <- left_join(uruguay, pbi_uy)
+
+mercado_uruguay <- mercado_uruguay %>% mutate(pbi = pbi/1000000000)
+
+mercado_uruguay$indice_tiempo <- gsub(mercado_uruguay$indice_tiempo, pattern = ".[1234567890]", replacement = "")
+mercado_uruguay$indice_tiempo <- gsub(mercado_uruguay$indice_tiempo, pattern = "[1234567890]", replacement = "")
+
+modeloUy <- lm(turistas ~ tipo_cambio_real + pbi + indice_tiempo, data = mercado_uruguay)
+summary(modeloUy)
+
+
+write.csv(tidy(modeloUy), "coefs_uruguay.csv")
+write.csv(glance(modeloUy), "lm_uruguay.csv")
+
+#Europa
+europa <- receptivo_tipo_cambio %>% 
+  filter(pais_origen == "Europa") %>% 
+  filter(!indice_tiempo == "mar.20 " &
+           !indice_tiempo == "abr.20 " &
+           !indice_tiempo == "may.20 " &
+           !indice_tiempo == "jun.20 " &
+           !indice_tiempo == "jul.20 " &
+           !indice_tiempo == "ago.20 ")
+
+europa$indice_tiempo <- gsub(europa$indice_tiempo, pattern = " ", replacement = "")
+
+pbi_eu <- readxl::read_xlsx("datasets_argentina/pbi_eu.xlsx")
+
+rm(mercado_europa)
+mercado_europa <- left_join(europa, pbi_eu)
+
+mercado_europa$indice_tiempo <- gsub(mercado_europa$indice_tiempo, pattern = ".[1234567890]", replacement = "")
+mercado_europa$indice_tiempo <- gsub(mercado_europa$indice_tiempo, pattern = "[1234567890]", replacement = "")
+
+modeloEu <- lm(turistas ~ tipo_cambio_real + pbi_per_capita + indice_tiempo, data = mercado_europa)
+summary(modeloEu)
+
+write.csv(tidy(modeloEu), "coefs_europa.csv")
+write.csv(glance(modeloEu), "lm_europa.csv")
+
+
+#EEUU
+usa <- receptivo_tipo_cambio %>% 
+  filter(pais_origen == "EE.UU. y Canadá") %>% 
+  filter(!indice_tiempo == "mar.20 " &
+           !indice_tiempo == "abr.20 " &
+           !indice_tiempo == "may.20 " &
+           !indice_tiempo == "jun.20 " &
+           !indice_tiempo == "jul.20 " &
+           !indice_tiempo == "ago.20 ")
+
+usa$indice_tiempo <- gsub(usa$indice_tiempo, pattern = " ", replacement = "")
+
+pbi_usa <- readxl::read_xlsx("datasets_argentina/pbi_usa.xlsx")
+
+rm(mercado_usa)
+mercado_usa <- left_join(usa, pbi_usa)
+
+mercado_usa$indice_tiempo <- gsub(mercado_usa$indice_tiempo, pattern = ".[1234567890]", replacement = "")
+mercado_usa$indice_tiempo <- gsub(mercado_usa$indice_tiempo, pattern = "[1234567890]", replacement = "")
+
+modeloUs <- lm(turistas ~ tipo_cambio_real + pbi_per_capita + indice_tiempo, data = mercado_usa)
+summary(modeloUs)
+
+write.csv(tidy(modeloUs), "coefs_usa.csv")
+write.csv(glance(modeloUs), "lm_usa.csv")
+
+```
+
+Modelos
+```{r}
+modelo_usa <- tidy(modeloUs)
+modelo_usa <- modelo_usa %>% select(term, estimate, p.value)
+modelo_usa$pais_origen <- "EE.UU. y Canadá"
+
+modelo_br <- tidy(modeloBr)
+modelo_br <- modelo_br %>% select(term, estimate, p.value)
+modelo_br$pais_origen <- "Brasil"
+
+modelo_ch <- tidy(modeloCh)
+modelo_ch <- modelo_ch %>% select(term, estimate, p.value)
+modelo_ch$pais_origen <- "Chile"
+
+modelo_uy <- tidy(modeloUy)
+modelo_uy <- modelo_uy %>% select(term, estimate, p.value)
+modelo_uy$pais_origen <- "Uruguay"
+
+modelo_eu <- tidy(modeloEu)
+modelo_eu <- modelo_eu %>% select(term, estimate, p.value)
+modelo_eu$pais_origen <- "Europa"
+
+rm(modelo_demanda)
+modelo_demanda <- rbind(modelo_usa, modelo_br, modelo_eu, modelo_uy, modelo_ch)
+
+modelo_demanda <- modelo_demanda %>% rename(Variables = term, 
+                                            Coeficientes = estimate,
+                                            "P Valor" = p.value)
+
+modelo_demanda <- modelo_demanda %>% filter(!Variables == "(Intercept)")
+modelo_demanda <- modelo_demanda %>% mutate(Variables = case_when(
+  Variables == "indice_tiempoago" ~ "Agosto",
+  Variables == "indice_tiempodic" ~ "Diciembre",
+  Variables == "indice_tiempoene" ~ "Enero",
+  Variables == "indice_tiempofeb" ~ "Febrero",
+  Variables == "indice_tiempojul" ~ "Julio",
+  Variables == "indice_tiempojun" ~ "Junio",
+  Variables == "indice_tiempomar" ~ "Marzo",
+  Variables == "indice_tiempomay" ~ "Mayo",
+  Variables == "indice_tiemponov" ~ "Noviembre",
+  Variables == "indice_tiempooct" ~ "Octubre",
+  Variables == "indice_tiemposept" ~ "Septiembre",
+  Variables == "tipo_cambio_real" ~ "Tipo de Cambio Real",
+  Variables == "pbi" ~ "PBI en miles de millones",
+  Variables == "pbi_per_capita" ~ "PBI per cápita"
+  ))
+
+modelo_demanda <- modelo_demanda %>% filter(!pais_origen == "Uruguay")
+
+modelo_demanda <- modelo_demanda %>% mutate(dummy = case_when(`P Valor` < 0.05
+ ~ 1,
+                                                              `P Valor` >= 0.05
+ ~ 0))
+
+modelo_demanda$Coeficientes <- round(modelo_demanda$Coeficientes, 2)
+modelo_demanda$`P Valor` <- round(modelo_demanda$`P Valor`, 12)
+
+mercado_brasil <- mercado_brasil[,1:5]
+mercados_df <- rbind(mercado_brasil, mercado_chile, mercado_europa, mercado_usa)
+
+
+estadisticos_usa <- glance(modeloUs)
+estadisticos_usa$pais_origen <- "EE.UU. y Canadá"
+
+estadisticos_br <- glance(modeloBr)
+estadisticos_br$pais_origen <- "Brasil"
+
+estadisticos_uy <- glance(modeloUy)
+estadisticos_uy$pais_origen <- "Uruguay"
+
+estadisticos_ch <- glance(modeloCh)
+estadisticos_ch$pais_origen <- "Chile"
+
+estadisticos_eu <- glance(modeloEu)
+estadisticos_eu$pais_origen <- "Europa"
+
+estadisticos_modelo <- rbind(estadisticos_br, estadisticos_ch, estadisticos_eu, estadisticos_usa, estadisticos_uy)
+
+```
+
+Proyecciones
+```{r}
+proy_rec <- receptivo_argentina[-(460:522),-(3:5)]
+proy_rec <- proy_rec %>%  filter(!indice_tiempo == "mar.20 ")
+proy_emi <- emisivo_argentina[-(460:522),-(3:5)]
+proy_emi <- proy_emi %>%  filter(!indice_tiempo == "mar.20 ")
+```
+
+Parques nacionales
+```{r}
+parques_nacionales <- read.csv("datasets_argentina/pn_region.csv")
+
+parques_nacionales <- parques_nacionales[-(1765:1860),-5]
+
+unique(parques_nacionales$region_de_destino)
+
+parques_nacionales <- parques_nacionales %>% 
+  mutate(region_de_destino = case_when(region_de_destino == "buenos aires" ~ "Buenos Aires",
+                                       region_de_destino == "cordoba" ~ "Córdoba",
+                                       region_de_destino == "cuyo" ~ "Cuyo",
+                                       region_de_destino == "litoral" ~ "Litoral",
+                                       region_de_destino == "norte" ~ "Norte",
+                                       region_de_destino == "patagonia" ~ "Patagonia"))
+
+parques_nacionales$indice_tiempo <- as.yearmon(as.character.Date(parques_nacionales$indice_tiempo), "%Y-%m") 
+parques_nacionales$indice_tiempo <- as.character.Date(format(parques_nacionales$indice_tiempo, "%b%y"))
+parques_nacionales$indice_tiempo <- year(parques_nacionales$indice_tiempo)
+
+parques_nacionales <- parques_nacionales %>% group_by(indice_tiempo, region_de_destino, origen_visitantes) %>% summarise(visitas = sum(visitas))
+```
+
+Wordcloud
+```{r}
+#Datasets ya armados
+alerces_token <- read.csv("datasets_argentina/alerces_token.csv")
+alerces_token$X <- NULL
+
+talampaya_token <- read.csv("datasets_argentina/talampaya_token.csv")
+talampaya_token$X <- NULL
+
+glaciar_token <- read.csv("datasets_argentina/glaciar_token.csv")
+glaciar_token$X <- NULL
+
+iguazu_token <- read.csv("datasets_argentina/iguazu_token.csv")
+iguazu_token$X <- NULL
+
+#Extracción de nuevos datos
+
+url <- "https://www.google.com/search?q=pn+calilegua&oq=pn+cali&aqs=chrome.0.0j69i57j0j0i22i30j0i22i30i395l2j0i10i22i30i395l2j0i22i30i395l2.2297j1j7&sourceid=chrome&ie=UTF-8#lrd=0x941ac47b2de67a65:0xae490df85dbf4c67,1,,,"
+
+driver<- rsDriver(port= 2336L, chromever = "87.0.4280.88")
+remDr <- driver[["client"]]
+remDr$navigate(url)
+
+remDr$open()
+comentarios <- c()
+
+contador <- 0
+
+while(contador < 990){
+  
+  leer_mas <- driver$client$findElement(using = "css", value = "._3maEfNCR") 
+  leer_mas$clickElement() 
+  
+  review <- driver$client$findElements(using = "css", value = ".IRsGHoPm") #busco los comentarios
+  for(ele in 1:length(review)) {
+    comentarios <- append(comentarios, value =review[[ele]]$getElementText()) 
+  }
+  
+  next_pag <- driver$client$findElement(using = "css", value = ".next") 
+  next_pag$clickElement()
+  
+  Sys.sleep(1)
+  
+  contador <- contador + 1
+}
+
+
+review <- driver$client$findElements(using = "css", value = ".Jtu6Td")
+
+for(i in 1:length(review)){ 
+  comentarios <- append(comentarios, value =review[[i]]$getElementText()) 
+}
+
+data_comentarios <- as.data.frame(t(t(comentarios)))
+data_comentarios <- rename(data_comentarios, Comentarios = V1)
+
+```
+
+```{r}
+data_token <- data_comentarios %>%
+  unnest_tokens(word, Comentarios)
+
+# Genero dataframe especial con stop words en español, de la librería tm
+
+custom_stop_words <- data_frame(word = tm::stopwords("spanish"),
+                                          lexicon = "custom")
+
+#Stop words personalizadas
+stop_personalizadas <- tibble(word = c("glaciar","perito",
+                                   "moreno", "parque", "lugar", "2",
+                                   "calafate", "dia", "dos", "así", "asi", "días", "dias",
+                                   "glaciares", "llevar", "llegar", "llega", "tener",
+                                   "parque", "talampaya", "4", "3",
+                                   "lugar",
+                                   "si",
+                                   "ir",
+                                   "ver",
+                                   "hacer",
+                                   "bien",
+                                   "puede",
+                                   "vale",
+                                   "pena",
+                                   "entrada",
+                                   "mas",
+                                   "nacional",
+                                   "vez",
+                                   "visita",
+                                   "vistas",
+                                   "solo",
+                                   "día",
+                                   "cada", "pueden", "llevar", "dejar", "hace", "luego", "tan", "pasarelas", "tin", "san", "12", "fin", "mundo", "google"
+                                   ))
+
+# Genero un antijoin para sacar de mis tokens a las stop words
+data_token <- data_token %>%
+  anti_join(custom_stop_words)
+
+data_token <- data_token %>%
+  anti_join(stop_personalizadas)
+
+data_token %>%
+  count(word, sort=T) %>% 
+  wordcloud2(size=1.4, color = "random-dark", backgroundColor = "#273453", shape = "circle")
+
+write.csv(data_token, "condorito_token.csv")
+
+calilegua_token <- read.csv("datasets_argentina/pn/calilegua_token.csv")
+cardones_token <- read.csv("datasets_argentina/pn/cardones_token.csv")
+ciervo_token <- read.csv("datasets_argentina/pn/ciervo_token.csv")
+fuego_token <- read.csv("datasets_argentina/pn/fuego_token.csv")
+huapi_token <- read.csv("datasets_argentina/pn/huapi_token.csv")
+ibera_token <- read.csv("datasets_argentina/pn/ibera_token.csv")
+leoncito_token <- read.csv("datasets_argentina/pn/leoncito_token.csv")
+palmar_token <- read.csv("datasets_argentina/pn/palmar_token.csv")
+puelo_token <- read.csv("datasets_argentina/pn/puelo_token.csv")
+quijadas_token <- read.csv("datasets_argentina/pn/quijadas_token.csv")
+condorito_token <- data_token
+
+unique(parques_nacionales$region_de_destino)
+
+quijadas_token$X <- NULL
+
+alerces_token$region_de_destino = "Patagonia"
+alerces_token$parque_nombre = "Los Alerces"
+
+calilegua_token$region_de_destino = "Norte"
+calilegua_token$parque_nombre = "Calilegua"
+
+cardones_token$region_de_destino = "Norte"
+cardones_token$parque_nombre = "Los Cardones"
+
+ciervo_token$region_de_destino = "Buenos Aires"
+ciervo_token$parque_nombre = "Ciervo de los Pantanos"
+
+fuego_token$region_de_destino = "Patagonia"
+fuego_token$parque_nombre = "Tierra del Fuego"
+
+huapi_token$region_de_destino = "Patagonia"
+huapi_token$parque_nombre = "Nahuel Huapi"
+
+ibera_token$region_de_destino = "Litoral"
+ibera_token$parque_nombre = "Iberá"
+
+leoncito_token$region_de_destino = "Cuyo"
+leoncito_token$parque_nombre = "El Leoncito"
+
+palmar_token$region_de_destino = "Litoral"
+palmar_token$parque_nombre = "El Palmar"
+
+puelo_token$region_de_destino = "Patagonia"
+puelo_token$parque_nombre = "Lago Puelo"
+
+quijadas_token$region_de_destino = "Cuyo"
+quijadas_token$parque_nombre = "Sierra de las Quijadas"
+
+iguazu_token$region_de_destino = "Litoral"
+iguazu_token$parque_nombre = "Iguazú"
+
+talampaya_token$region_de_destino = "Norte"
+talampaya_token$parque_nombre = "Talampaya"
+
+glaciar_token$region_de_destino = "Patagonia"
+glaciar_token$parque_nombre = "Los Glaciares"
+
+condorito_token$region_de_destino = "Córdoba"
+condorito_token$parque_nombre = "Quebrada del Condorito"
+
+
+pn_token <- rbind(alerces_token, calilegua_token, cardones_token, ciervo_token, condorito_token, fuego_token, glaciar_token, huapi_token, ibera_token, iguazu_token,leoncito_token, palmar_token, puelo_token, quijadas_token, talampaya_token)
+
+```
+
+Ocupación hotelera
+```{r}
+estadia_media <- read.csv("datasets_argentina/eoh/estadia-media-residentes-y-no-residentes-por-destino.csv", encoding = "UTF-8")
+
+estadia_media$X.U.FEFF.indice_tiempo <- substr(estadia_media$X.U.FEFF.indice_tiempo, start = 1, stop = 4)
+estadia_media <- estadia_media %>% rename(indice_tiempo = X.U.FEFF.indice_tiempo)
+
+estadia_media <- estadia_media %>% group_by(indice_tiempo, region_de_destino, origen_pernoctes) %>% mutate(estadia_media_en_noches = mean(estadia_media_en_noches)) %>% filter(origen_pernoctes == "Residentes" | origen_pernoctes == "No residentes")
+
+estadia_media$observaciones <- NULL
+
+estadia_media <- estadia_media %>% drop_na()
+
+pernoctes <- read.csv("datasets_argentina/eoh/pernoctes-residentes-y-no-residentes-por-destino.csv", encoding = "UTF-8")
+
+pernoctes$X.U.FEFF.indice_tiempo <- substr(pernoctes$X.U.FEFF.indice_tiempo, start = 1, stop = 4)
+pernoctes <- pernoctes %>% rename(indice_tiempo = X.U.FEFF.indice_tiempo)
+
+pernoctes <- pernoctes %>% group_by(indice_tiempo, region_de_destino, origen_pernoctes) %>% mutate(pernoctes = sum(pernoctes))
+
+pernoctes$observaciones <- NULL
+
+pernoctes <- pernoctes %>% drop_na()
+
+tasa_ocupacion <- read.csv("datasets_argentina/eoh/top-por-region-y-categoria.csv", encoding = "UTF-8")
+
+tasa_ocupacion$X.U.FEFF.indice_tiempo <- substr(tasa_ocupacion$X.U.FEFF.indice_tiempo, start = 1, stop = 4)
+tasa_ocupacion <- tasa_ocupacion %>% rename(indice_tiempo = X.U.FEFF.indice_tiempo)
+
+tasa_ocupacion <- tasa_ocupacion %>% 
+  group_by(indice_tiempo, region_de_destino, categoria_del_hotel) %>% 
+  mutate(tasa_de_ocupacion_plazas = mean(tasa_de_ocupacion_plazas)*100) %>% 
+  filter(!categoria_del_hotel == "Total")
+
+tasa_ocupacion$observaciones <- NULL
+
+tasa_ocupacion <- tasa_ocupacion %>% drop_na()
+
+viajeros_eoh <- read.csv("datasets_argentina/eoh/viajeros-hospedados-residentes-y-no-residentes-por-destino.csv", encoding = "UTF-8")
+
+viajeros_eoh$X.U.FEFF.indice_tiempo <- substr(viajeros_eoh$X.U.FEFF.indice_tiempo, start = 1, stop = 4)
+viajeros_eoh <- viajeros_eoh %>% rename(indice_tiempo = X.U.FEFF.indice_tiempo)
+
+viajeros_eoh <- viajeros_eoh %>% 
+  group_by(indice_tiempo, region_de_destino, origen_viajeros) %>% 
+  mutate(viajeros = sum(viajeros)) 
+
+viajeros_eoh$observaciones <- NULL
+
+viajeros_eoh <- viajeros_eoh %>% drop_na()
+```
+
